@@ -1,7 +1,9 @@
-var express = require('express');
-var app = express();
-var DButilsAzure = require('./DButils');
+const express = require('express');
+const jwt = require("jsonwebtoken");
+const app = express();
+const DButilsAzure = require('./DButils');
 
+const key = "yuvalMor";
 
 app.use(express.json());
 
@@ -13,7 +15,9 @@ exports.login = function (req, res) {
         DButilsAzure.execQuery(sql)
             .then(function (result) {
                 if (result[0].password === password) {
-                    var token = generateRandomCharacters(1, 10, true);
+                    payload = { user_name: userName, admin: false };
+                    options = { expiresIn: "1d" };
+                    const token = jwt.sign(payload, key, options);
                     res.send(token);
                 } else {
                     res.send("something went wrong");
@@ -43,24 +47,30 @@ exports.register = function (req, res) {
     var email = req.body.email;
     var question = req.body.question;
     var answer = req.body.answer;
-    var interest = req.body.interest;
-    var sql = "INSERT INTO Users ([user_name], [password],[first_name], [last_name], [city], [country], [email], [question],[answer]) VALUES ('" + userName + "', '" + password + "', '" + firstName + "', '" + lastName + "', '" + city + "', '" + country + "', '" + email + "','" + question + "', '" + answer + "')";
+    var category = req.body.interest;
+    var sql = "INSERT INTO Users ([user_name], [password],[first_name], [last_name], [city], [country], [email]) VALUES ('" + userName + "', '" + password + "', '" + firstName + "', '" + lastName + "', '" + city + "', '" + country + "', '" + email + "')";
     try {
         DButilsAzure.insert(sql)
             .then(function (result) {
                 var details = {
-                    "user_name" : userName,
-                    "password" : password
+                    "user_name": userName,
+                    "password": password
                 };
-                for (let i = 0; i < interest.length; i++) {
-                    var sql = "INSERT INTO UsersPOI (user_name, name) VALUES ('" + userName + "','" + interest[i] + "')";
-                    DButilsAzure.insert(sql).then().catch(function (err) {
+                for (let i = 0; i < category.length; i++) {
+                    var select = "SELECT FROM UsersCategories where name = '" +category[i]+ "'";
+                    DButilsAzure.execQuery(select).then(function (result){
+                        if (result.length > 0){
+                            var sql = "INSERT INTO UsersCategories (user_name, name) VALUES ('" + userName + "','" + category[i] + "')";
+                            DButilsAzure.insert(sql).then().catch(function (err) {
+                                console.log(err);
+                                // res.send(err)
+                            });
+                        }
+                    }).catch(function (err) {
                         console.log(err);
-                       // res.send(err)
-                    });
-                }
-                res.send(details);
-            })
+                        res.send(err);});
+                    }
+            res.send(details);})
             .catch(function (err) {
                 console.log(err);
                 res.send(err)
@@ -130,3 +140,15 @@ exports.getPassword = function (req, res) {
     }
 
 };
+
+exports.getLastTwoSavedinterest = function (req, res){
+
+};
+
+exports.getAllSavedInterest = function (req, res){};
+
+
+exports.deleteInterest = function (req, res){};
+
+
+exports.saveInterest = function (req, res){};
