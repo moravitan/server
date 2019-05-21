@@ -77,6 +77,7 @@ exports.addReview = function (req, res) {
 };
 
 
-exports.getinterestInfo = function (req, res){
+exports.getRecomendedinterest = function (req, res){};
 
-};
+
+exports.getinterestInfo = function (req, res){};
