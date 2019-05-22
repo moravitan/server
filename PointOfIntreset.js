@@ -73,11 +73,12 @@ exports.addReview = function (req, res) {
             res.status(400).send(e.message)
         }
     }
-
 };
 
 
-exports.getRecomendedinterest = function (req, res){};
+exports.getRecomendedinterest = function (req, res){
+
+};
 
 
 exports.getinterestInfo = function (req, res){};

@@ -89,7 +89,6 @@ exports.execQuery = function (query) {
 exports.insert = function (query) {
     return new Promise(function (resolve, reject) {
         try {
-
             //acquire a connection
             pool.acquire(function (err, connection) {
                 if (err) {
