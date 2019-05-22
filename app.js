@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const user = require('./Users');
 const POI = require('./PointOfIntreset');
+const DButilsAzure = require('./DButils');
 
 var categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
 
@@ -35,8 +36,8 @@ app.get('/getRandomThreeMostPopularPointOfIntrest', (req, res) => {
 });
 
 // TODO
-app.get('/getRecomendedinterest', (req, res) => {
-
+app.get('/getRecomendedinterest/:userName', (req, res) => {
+    POI.getRecomendedinterest(reg, res);
 });
 
 // TODO
@@ -45,8 +46,8 @@ app.get('/getLastTwoSavedinterest', (req, res) => {
 });
 
 // TODO
-app.get('/getinterestInfo', (req, res) => {
-
+app.get('/getinterestInfo/:interestName', (req, res) => {
+    POI.getinterestInfo(req,res);
 });
 
 
