@@ -3,8 +3,7 @@ const app = express();
 const user = require('./Users');
 const POI = require('./PointOfIntreset');
 const jwt = require("jsonwebtoken");
-const usersPOI = require('./UsersPOI');
-
+const DButilsAzure = require('./DButils');
 
 var categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
 
@@ -66,8 +65,8 @@ app.get('/getLastTwoSavedinterest', (req, res) => {
 });
 
 // TODO
-app.get('/getinterestInfo', (req, res) => {
-    POI.getinterestInfo(req, res);
+app.get('/getinterestInfo/:interestName', (req, res) => {
+    POI.getinterestInfo(req,res);
 });
 
 
