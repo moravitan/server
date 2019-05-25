@@ -2,14 +2,21 @@ const express = require('express');
 const app = express();
 const user = require('./Users');
 const POI = require('./PointOfIntreset');
+const usersPOI = require('./UsersPOI');
 const jwt = require("jsonwebtoken");
-const DButilsAzure = require('./DButils');
+var userName = "";
 
-var categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
+exports.userName = userName;
+
+const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
+
+const routers = ["/getPassword", "/getRandomThreeMostPopularPointOfInterest", "/getRecommendedInterest",
+    "/getLastTwoSavedInterest", "/getInterestInfo", "/getCategories", "/getAllPOI", "/getAllSavedInterest",
+    "/saveInterest", "/deleteInterest", "/addReview", "/saveSortedInterest"];
 
 app.use(express.json());
 
-const key = "yuvalMor";
+const key = "YuvalMor";
 
 var port = 3000;
 
@@ -19,8 +26,7 @@ app.listen(port, function () {
 });
 
 
-app.use('/^[login]|^[register]', (req, res, next) => {
-    console.log("hey");
+app.use(routers, (req, res, next) => {
     const token = req.header("x-auth-token");
     // no token
     if (!token) res.status(401).send("Access denied. No token provided.");
@@ -28,6 +34,7 @@ app.use('/^[login]|^[register]', (req, res, next) => {
     try {
         const decoded = jwt.verify(token, key);
         req.decoded = decoded;
+        res.user_name = decoded.user_name;
         next(); //move on to the actual function
     } catch (exception) {
         res.status(400).send("Invalid token.");
@@ -35,82 +42,68 @@ app.use('/^[login]|^[register]', (req, res, next) => {
 });
 
 
-app.post('/login',  (req, res) => {
-    user.login(req,res);
+app.post('/login', (req, res) => {
+    user.login(req, res);
+});
+
+app.post('/register', (req, res) => {
+    user.register(req, res);
 });
 
 
-app.post('/register', (req, res, next) => {
-    user.register(req,res, next);
+app.post('/getPassword', (req, res) => {
+    user.getPassword(req, res);
 });
 
 
-app.post('/getPassword',(req, res) => {
-    user.getPassword(req,res);
+app.get('/getRandomThreeMostPopularPointOfInterest', (req, res) => {
+    POI.getRandomThreeMostPopularPointOfInterest(req, res);
+});
+
+app.get('/getRecommendedInterest', (req, res) => {
+    usersPOI.getRecommendedInterest(req, res);
 });
 
 
-app.get('/getRandomThreeMostPopularPointOfIntrest', (req, res) => {
-    POI.getRandomThreeMostPopularPointOfIntrest(req,res);
+app.get('/getLastTwoSavedInterest', (req, res) => {
+    usersPOI.getLastTwoSavedInterest(req, res);
 });
 
-// TODO
-app.get('/getRecomendedinterest/:userName', (req, res) => {
-        POI.getRecomendedinterest(req, res);
-});
-
-// TODO
-app.get('/getLastTwoSavedinterest', (req, res) => {
-    usersPOI.getLastTwoSavedinterest(req,res);
-});
-
-// TODO
-app.get('/getinterestInfo/:interestName', (req, res) => {
-    POI.getinterestInfo(req,res);
+app.get('/getInterestInfo/:interest_name', (req, res) => {
+    POI.getInterestInfo(req, res);
 });
 
 
-app.get('/getCategories', (req, res) =>{
+app.get('/getCategories', (req, res) => {
     res.send(categories);
 });
 
-// TODO : maybe moving it to client side
-app.get('/searchInterestByName', (req, res) => {
-
+app.get('/getAllPOI', (req, res) => {
+    POI.getAllPOI(req, res);
 });
 
-/*// TODO : maybe moving it to client side
-app.get('/searchInterestByCategory', (req, res) => {
-
-});*/
-
-// TODO
-app.get('/getAllInterests', (req, res) => {
-
-});
-
-// TODO
-app.put('/saveInterest', (req, res) =>{
-    usersPOI.saveInterest(req,res);
-
-});
-
-// TODO
-app.post('/deleteInterest', (req, res) => {
-    usersPOI.deleteInterest(req,res);
-});
-
-// TODO
-app.post('/getAllSavedInterest', (req, res) => {
+app.get('/getAllSavedInterest', (req, res) => {
     usersPOI.getAllSavedInterest(req, res);
 });
 
 
-app.post('/addReview', (req, res) => {
-    POI.addReview(req,res);
+app.put('/saveInterest', (req, res) => {
+    usersPOI.saveInterest(req, res);
+
+});
+
+app.delete('/deleteInterest', (req, res) => {
+    usersPOI.deleteInterest(req, res);
 });
 
 
+app.post('/addReview', (req, res) => {
+    POI.addReview(req, res);
+});
+
+app.post('/saveSortedInterest', (req, res) => {
+
+});
 
 
 

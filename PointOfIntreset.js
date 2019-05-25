@@ -1,25 +1,31 @@
 var express = require('express');
 var app = express();
 var DButilsAzure = require('./DButils');
-var rank = 3.5;
+var appJS = require('./app');
+let userName = appJS.userName;
+
+var rank = 60;
 
 app.use(express.json());
 
 
-// TODO: tests
-exports.getRandomThreeMostPopularPointOfIntrest = function (req, res) {
+exports.getRandomThreeMostPopularPointOfInterest = function (req, res) {
     try {
-        var sql = "SELECT * FROM POI ORDER BY rank DESC where rank >= '" + rank + "'";
-          DButilsAzure.execQuery(sql)
+        var sql = "SELECT name, picture, category, rank FROM POI where rank >= '" + rank + "' ORDER BY rank DESC";
+        DButilsAzure.execQuery(sql)
             .then(function (result) {
                 var POI = [];
+                var POInames = [];
                 var i = 0;
                 while (POI.length < 3) {
-                    var index = Math.floor(Math.random() * (result.length + 1)) + min;
-                    POI[i] = result[index];
-                    i++;
+                    var index = Math.floor(Math.random() * (Object.keys(result).length));
+                    if (!POInames.includes(result[index].name)) {
+                        POI[i] = result[index];
+                        POInames[i] = result[index].name;
+                        i++;
+                    }
                 }
-                res.send(result);
+                res.send(POI);
             })
             .catch(function (err) {
                 console.log(err);
@@ -35,18 +41,27 @@ exports.getRandomThreeMostPopularPointOfIntrest = function (req, res) {
 };
 
 
-// TODO : test
 exports.addReview = function (req, res) {
     var name = req.body.name;
     var rank = req.body.rank;
     var review = req.body.review;
-    var date = new Date();
+    var date = new Date().toISOString();
     var id = 1;
     try {
         var sql = "SELECT * FROM POIreview";
         DButilsAzure.execQuery(sql)
             .then(function (result) {
-                id = result.length;
+                id += Object.keys(result).length;
+                sql = "INSERT INTO POIreview (id, name, review, rank, date) VALUES ('" + id + "', '" + name + "', '" + review +
+                    "', '" + rank + "', '" + date + "')";
+                DButilsAzure.execQuery(sql)
+                    .then(function (result) {
+                        res.sendStatus(200);
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                        res.sendStatus(400);
+                    });
             })
             .catch(function (err) {
                 console.log(err);
@@ -58,14 +73,34 @@ exports.addReview = function (req, res) {
         }
     }
     try {
-        sql = "INSERT INTO POIreview (id, name, review, rank, date) VALUES ('" + id + "', '" + name + "', '" + review +
-            "', '" + rank + "', '" + date + "'";
+        var selectSql = "SELECT SUM(rank) as sumRank from POIreview where name = '" + name + "' group by name";
+        sql = "SELECT * from POIreview where name = '" + name + "'";
         DButilsAzure.execQuery(sql)
             .then(function (result) {
-                res.send(result);
-            })
-            .catch(function (err) {
-                console.log(err);
+                var size = 1 + Object.keys(result).length;
+                console.log(size);
+                DButilsAzure.execQuery(selectSql)
+                    .then(function (result) {
+                        var total = 0;
+                        if (Object.keys(result).length > 0) {
+                            total = parseInt(result[0].sumRank);
+                        }
+                        console.log(total);
+                        var newRank = parseInt(((total / size) / 5) * 100);
+                        console.log(newRank);
+                        sql = "UPDATE POI set rank = '" + newRank + "' where name = '" + name + "'";
+                        DButilsAzure.execQuery(sql)
+                            .then(function (result) {
+                            })
+                            .catch(function (err) {
+                                console.log(err);
+                            });
+                    })
+                    .catch(function (err) {
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                    });
             });
     } catch (e) {
         console.log(e);
@@ -75,32 +110,37 @@ exports.addReview = function (req, res) {
     }
 };
 
-// TODO : test
-exports.getRecomendedinterest = function (req, res){
-    var userName = req.params.userName;
-    var sql = "SELECT POI.name, POI.picture " +
-        "FROM UsersCategories JOIN POI " +
-        "ON UsersCategories.name = POI.category WHERE UsersCategories.user_name = " + userName +
-        "AND POI.rank >3";
+
+exports.getAllPOI = function (req, res) {
+    var sql = "SELECT name, picture, rank, category FROM POI";
     DButilsAzure.execQuery(sql)
-    .then (function (result){
-        if(result[0].length!=0){
-           for (var i = 0 ; i < 2 ; i++){
-                res.send(result[i]);
-            }
-        }
-    })
-        .catch(function(err){
-            res.send('there is not categories to this user')
+        .then(function (result) {
+            res.send(result);
+        })
+        .catch(function (err) {
         })
 };
 
-// TODO : test
-exports.getinterestInfo = function (req, res){
-    var interestName = req.params.interestName;
-    var sql = "SELECT POI.description, POI.number_of_watch, AVG(OPI.rank)*100/5, max(date) as MaxDate "+
+
+
+
+exports.getInterestInfo = function (req, res) {
+    var interestName = req.params.interest_name;
+    var sql = "SELECT POI.name, POI.description, POI.number_of_watchers, POI.rank as rank, POIreview.review, " +
+        "POIreview.rank as reviewRank , POIreview.date  " +
         "FROM POI JOIN POIreview " +
-        "ON POI.name = POIreview.name WHERE POI.name = " + interestName ;
-
-
+        "ON POI.name = POIreview.name WHERE POIreview.name = '" + interestName + "' order by POIreview.date desc";
+    DButilsAzure.execQuery(sql)
+        .then(function (result) {
+            var response = [];
+            if (Object.keys(result).length > 0) {
+                for (var i = 0; i < 2 && i < Object.keys(result).length; i++) {
+                    response[i] = result[i];
+                }
+            }
+            res.send(response);
+        })
+        .catch(function (err) {
+        })
 };
+

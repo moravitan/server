@@ -2,8 +2,10 @@ const express = require('express');
 const jwt = require("jsonwebtoken");
 const app = express();
 const DButilsAzure = require('./DButils');
+var appJS = require('./app');
+let user_name = appJS.userName;
 
-const key = "yuvalMor";
+const key = "YuvalMor";
 
 var userName;
 var password;
@@ -14,10 +16,10 @@ exports.login = function (req, res) {
     try {
         var userName = req.body.user_name;
         var password = req.body.password;
-        var sql = "SELECT password FROM Users where user_name = '" + userName + "'";
+        var sql = "SELECT password FROM Users where user_name = '" + userName + "' and password = '" + password + "'";
         DButilsAzure.execQuery(sql)
             .then(function (result) {
-                if (result.length > 0 && result[0].password === password) {
+                if (Object.keys(result).length > 0) {
                     payload = {user_name: userName, admin: false};
                     options = {expiresIn: "1d"};
                     const token = jwt.sign(payload, key, options);
@@ -37,7 +39,6 @@ exports.login = function (req, res) {
         }
     }
 };
-
 
 // TODO : add interest point to user
 exports.register = function (req, res) {
@@ -67,13 +68,13 @@ exports.register = function (req, res) {
                 //res.send("Category isn't recognized")
             });
     }
-    var question = req.body.question;
-    var answer = req.body.answer;
-    if (question.length !== answer.length) {
+    var questions = req.body.questions;
+    var answers = req.body.answers;
+    if (questions.length !== answers.length) {
         res.send("Number of questions doesn't much number of answers")
     }
-    for (let i = 0; i < question.length; i++) {
-        sql = "INSERT INTO UsersQuestions (user_name, question, answer) VALUES ('" + userName + "','" + question[i] + "', '" + answer[i] + "')";
+    for (let i = 0; i < questions.length; i++) {
+        sql = "INSERT INTO UsersQuestions (user_name, question, answer) VALUES ('" + userName + "','" + questions[i] + "', '" + answers[i] + "')";
         DButilsAzure.insert(sql).then(function (result) {
         })
             .catch(function (err) {
@@ -83,6 +84,35 @@ exports.register = function (req, res) {
     }
     var details = {"user_name": userName, "password": password};
     res.send(details);
+};
+
+exports.getPassword = function (req, res) {
+    try {
+        var userName = req.body.user_name;
+        var question = req.body.question;
+        var answer = req.body.answer;
+        var sql = "SELECT Users.password FROM UsersQuestions join Users " +
+            "on Users.user_name = UsersQuestions.user_name where UsersQuestions.user_name = '" + userName + "' " +
+            "and UsersQuestions.question = '" + question + "' and UsersQuestions.answer = '" + answer + "'";
+        DButilsAzure.execQuery(sql)
+            .then(function (result) {
+                if (Object.keys(result).length > 0) {
+                    res.send(result[0].password);
+                } else {
+                    res.sendStatus(404);
+                }
+            })
+            .catch(function (err) {
+                console.log(err);
+                res.send(err)
+            });
+    } catch (e) {
+        console.log(e);
+        if (e instanceof CustomError) {
+            res.status(400).send(e.message)
+        }
+    }
+
 };
 
 function generateRandomCharacters(min, max, isPassword) {
@@ -112,36 +142,4 @@ function generateRandomCharacters(min, max, isPassword) {
     }
 
 }
-
-
-exports.getPassword = function (req, res) {
-    try {
-        var userName = req.body.user_name;
-        var question = req.body.question;
-        var answer = req.body.answer;
-        var sql = "SELECT Users.password FROM UsersQuestions join Users " +
-            "on Users.user_name = UsersQuestions.user_name where UsersQuestions.user_name = '" + userName + "' " +
-            "and UsersQuestions.question = '" + question + "' and UsersQuestions.answer = '" + answer + "'";
-        DButilsAzure.execQuery(sql)
-            .then(function (result) {
-                if (Object.keys(result).length > 0) {
-                    res.send(result[0].password);
-                }
-                else{
-                    res.sendStatus(404);
-                }
-            })
-            .catch(function (err) {
-                console.log(err);
-                res.send(err)
-            });
-    } catch (e) {
-        console.log(e);
-        if (e instanceof CustomError) {
-            res.status(400).send(e.message)
-        }
-    }
-
-};
-
 
