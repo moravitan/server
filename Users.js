@@ -2,10 +2,10 @@ const express = require('express');
 const jwt = require("jsonwebtoken");
 const app = express();
 const DButilsAzure = require('./DButils');
-var appJS = require('./app');
-let user_name = appJS.userName;
 
 const key = "YuvalMor";
+
+const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
 
 var userName;
 var password;
@@ -25,7 +25,7 @@ exports.login = function (req, res) {
                     const token = jwt.sign(payload, key, options);
                     res.send(token);
                 } else {
-                    res.send("something went wrong");
+                    res.sendStatus(400);
                 }
             })
             .catch(function (err) {
@@ -40,8 +40,8 @@ exports.login = function (req, res) {
     }
 };
 
-// TODO : add interest point to user
 exports.register = function (req, res) {
+    var isValidRequest = true;
     userName = generateRandomCharacters(3, 8, false);
     password = generateRandomCharacters(5, 10, true);
     var firstName = req.body.first_name;
@@ -49,41 +49,59 @@ exports.register = function (req, res) {
     var city = req.body.city;
     var country = req.body.country;
     var email = req.body.email;
-    var sql = "INSERT INTO Users ([user_name], [password],[first_name], [last_name], [city], [country], [email]) VALUES ('" + userName + "', '" + password + "', '" + firstName + "', '" + lastName + "', '" + city + "', '" + country + "', '" + email + "')";
-    DButilsAzure.insert(sql)
-        .then(function (result) {
-        })
-        .catch(function (err) {
-            console.log(err);
-            res.send(err)
-        });
-    var category = req.body.interest;
-    for (let i = 0; i < category.length; i++) {
-        sql = "INSERT INTO UsersCategories (user_name, name) VALUES ('" + userName + "','" + category[i] + "')";
-        DButilsAzure.insert(sql).then(function (result) {
-        })
-            .catch(function (err) {
-                console.log(err);
-                res.send(err);
-                //res.send("Category isn't recognized")
-            });
-    }
     var questions = req.body.questions;
     var answers = req.body.answers;
-    if (questions.length !== answers.length) {
-        res.send("Number of questions doesn't much number of answers")
+    var category = req.body.interest;
+    if (!checkIfValid(firstName,lastName,city,country,email,questions,answers,category)){
+        res.sendStatus(400);
     }
-    for (let i = 0; i < questions.length; i++) {
-        sql = "INSERT INTO UsersQuestions (user_name, question, answer) VALUES ('" + userName + "','" + questions[i] + "', '" + answers[i] + "')";
-        DButilsAzure.insert(sql).then(function (result) {
-        })
+    else {
+        var sql = "INSERT INTO Users ([user_name], [password],[first_name], [last_name], [city], [country], [email]) VALUES ('" + userName + "', '" + password + "', '" + firstName + "', '" + lastName + "', '" + city + "', '" + country + "', '" + email + "')";
+        DButilsAzure.insert(sql)
+            .then(function (result) {
+            })
             .catch(function (err) {
                 console.log(err);
-                res.send(err);
+                res.send(err)
             });
+        for (let i = 0; i < category.length; i++) {
+            if (!categories.includes(category[i])){
+                isValidRequest = false;
+            }
+
+        }
+        for (let i = 0; i < category.length && isValidRequest; i++) {
+            sql = "INSERT INTO UsersCategories (user_name, name) VALUES ('" + userName + "','" + category[i] + "')";
+            DButilsAzure.insert(sql).then(function (result) {
+            })
+                .catch(function (err) {
+                    cancel(userName);
+                    console.log(err);
+                    isValidRequest = false;
+                    //res.send("Category isn't recognized")
+                });
+        }
+
+        if (questions.length !== answers.length) {
+            isValidRequest = false;
+        }
+        if (!isValidRequest){
+            res.sendStatus(400);
+        }
+        else{
+            for (let i = 0; i < questions.length; i++) {
+                sql = "INSERT INTO UsersQuestions (user_name, question, answer) VALUES ('" + userName + "','" + questions[i] + "', '" + answers[i] + "')";
+                DButilsAzure.insert(sql).then(function (result) {
+                })
+                    .catch(function (err) {
+                        console.log(err);
+                        res.send(err);
+                    });
+            }
+            var details = {"user_name": userName, "password": password};
+            res.send(details);
+        }
     }
-    var details = {"user_name": userName, "password": password};
-    res.send(details);
 };
 
 exports.getPassword = function (req, res) {
@@ -143,3 +161,21 @@ function generateRandomCharacters(min, max, isPassword) {
 
 }
 
+function cancel(userName) {
+    var sql = "DELETE from Users where user_name = '"+userName+"'";
+    DButilsAzure.execQuery(sql).then().catch(error => console.log(error));
+
+}
+
+
+function checkIfValid(firstName, lastName, city, country, email, questions, answers, category) {
+    if (firstName === undefined) return false;
+    if (lastName === undefined) return false;
+    if (city === undefined) return false;
+    if (country === undefined) return false;
+    if (email === undefined) return false;
+    if (questions === undefined) return false;
+    if (answers === undefined) return false;
+    return category !== undefined;
+
+}

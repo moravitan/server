@@ -35,13 +35,13 @@ exports.getAllSavedInterest = function (req, res) {
 exports.deleteInterest = function (req, res) {
     var userName = res.user_name;
     var name = req.body.interest_name;
-    var sql = "DELETE FROM UsersPOI where user_name = '" + userName + "' and name = '" + name + "'";
-    DButilsAzure.execQuery(sql).then(function (result) {
-        res.sendStatus(200);
-    }).catch(error => {
-        console.log(error);
-        res.sendStatus(400);
-    });
+        var sql = "DELETE FROM UsersPOI where user_name = '" + userName + "' and name = '" + name + "'";
+        DButilsAzure.execQuery(sql).then(function (result) {
+            res.sendStatus(200);
+        }).catch(error => {
+            console.log(error);
+            res.sendStatus(400);
+        });
 };
 
 exports.saveInterest = function (req, res) {
@@ -59,13 +59,8 @@ exports.saveInterest = function (req, res) {
 
 
 
-// TODO : test
 exports.getRecommendedInterest = function (req, res) {
     var userName = res.user_name.toString();
-    console.log(userName);
-    var test = "SELECT POI.name, POI.picture, max(POI.rank) as, category " +
-        "FROM POI JOIN UsersCategories ON POI.category = UsersCategories.name " +
-        "WHERE UsersCategories.user_name = '"+userName+"' AND POI.rank > 50 order by rank desc";
     var sql = "select POI.name, POI.picture, POI.rank, POI.category FROM POI JOIN UsersCategories " +
         "ON POI.category = UsersCategories.name WHERE UsersCategories.user_name = '"+userName+"' " +
         "and rank = (select max(rank) from POI as r where r.category = POI.category) order by rank desc";
@@ -77,6 +72,6 @@ exports.getRecommendedInterest = function (req, res) {
             res.send(POI);
         })
         .catch(function (err) {
-            res.send('there is not categories to this user')
+            res.sendStatus(400);
         })
 };
