@@ -90,7 +90,7 @@ exports.addReview = function (req, res) {
                             console.log(total);
                             var newRank = parseInt(((total / size) / 5) * 100);
                             console.log(newRank);
-                            sql = "UPDATE POI set rank = '" + newRank + "' where name = '" + name + "'";
+                            sql = "UPDATE POI set rank = '" + newRank.toString() + "' where name = '" + name + "'";
                             DButilsAzure.execQuery(sql)
                                 .then(function (result) {
                                 })
@@ -123,8 +123,6 @@ exports.getAllPOI = function (req, res) {
         .catch(function (err) {
         })
 };
-
-
 
 
 exports.getInterestInfo = function (req, res) {

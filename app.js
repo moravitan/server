@@ -4,15 +4,12 @@ const user = require('./Users');
 const POI = require('./PointOfIntreset');
 const usersPOI = require('./UsersPOI');
 const jwt = require("jsonwebtoken");
-var userName = "";
-
-exports.userName = userName;
 
 const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
 
 const routers = ["/getPassword", "/getRandomThreeMostPopularPointOfInterest", "/getRecommendedInterest",
     "/getLastTwoSavedInterest", "/getInterestInfo", "/getCategories", "/getAllPOI", "/getAllSavedInterest",
-    "/saveInterest", "/deleteInterest", "/addReview", "/saveSortedInterest"];
+    "/saveInterest", "/deleteInterest", "/addReview", "/saveSortedInterest", "/getSortedPOI"];
 
 app.use(express.json());
 
@@ -101,12 +98,14 @@ app.post('/addReview', (req, res) => {
     POI.addReview(req, res);
 });
 
-app.post('/saveSortedInterest', (req, res) => {
-
+app.put('/saveSortedInterest', (req, res) => {
+    usersPOI.saveSortedInterest(req,res);
 });
 
 
-
+app.get('/getSortedPOI', (req, res) => {
+   usersPOI.getSortedPOI(req,res);
+});
 
 
 

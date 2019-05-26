@@ -6,6 +6,7 @@ const DButilsAzure = require('./DButils');
 const key = "YuvalMor";
 
 const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
+const countries = ["Australia", "Bolivia", "China", "Denemark","Israel","Latvia","Monaco","August","Norway","Panama","Switzerland","USA"];
 
 var userName;
 var password;
@@ -52,7 +53,7 @@ exports.register = function (req, res) {
     var questions = req.body.questions;
     var answers = req.body.answers;
     var category = req.body.interest;
-    if (!checkIfValid(firstName,lastName,city,country,email,questions,answers,category)){
+    if (!checkIfValid(firstName,lastName,city,country,email,questions,answers,category) || !countries.includes(country)){
         res.sendStatus(400);
     }
     else {
@@ -82,7 +83,7 @@ exports.register = function (req, res) {
                 });
         }
 
-        if (questions.length !== answers.length) {
+        if (questions.length !== answers.length || questions.length < 2) {
             isValidRequest = false;
         }
         if (!isValidRequest){
@@ -117,7 +118,7 @@ exports.getPassword = function (req, res) {
                 if (Object.keys(result).length > 0) {
                     res.send(result[0].password);
                 } else {
-                    res.sendStatus(404);
+                    res.sendStatus(400);
                 }
             })
             .catch(function (err) {
