@@ -148,6 +148,8 @@ exports.getInterestInfo = function (req, res) {
             .catch(function (err) {
                 res.sendStatus(400);
             })
+        sql = "UPDATE POI set number_of_watchers = number_of_watchers + 1 where name = '" + interestName + "'";
+        DButilsAzure.execQuery(sql).then().catch();
     }
 };
 

@@ -33,31 +33,25 @@ exports.getAllSavedInterest = function (req, res) {
     });
 };
 
-exports.deleteInterest = function (req, res) {
-    var userName = res.user_name;
-    var name = req.body.interest_name;
-    var sql = "DELETE FROM UsersPOI where user_name = '" + userName + "' and name = '" + name + "'";
-    DButilsAzure.execQuery(sql).then(function (result) {
-        res.send();
-    }).catch(error => {
-        console.log(error);
-        res.sendStatus(400);
-    });
-};
 
 exports.saveInterest = function (req, res) {
     var userName = res.user_name.toString();
     var name = req.body.interest_name;
     var date = new Date().toISOString();
-    var sql = "INSERT INTO UsersPOI (user_name,name, date) values ('" + userName + "', '" + name + "', '" + date + "')";
-    DButilsAzure.execQuery(sql).then(function (result) {
-        //res.send(result);
-        res.send();
-        // res.sendStatus(200);
-    }).catch(error => {
-        console.log(error);
-        res.sendStatus(400);
-    });
+    var isValid = true;
+    for (let i = 0; i < name.length; i++) {
+        var sql = "INSERT INTO UsersPOI (user_name,name, date, position) values ('" + userName + "', " +
+            "'" + name[i] + "', '" + date + "', '"+i+"')";
+        DButilsAzure.execQuery(sql).then(function (result) {
+        }).catch(error => {
+            isValid = false;
+            console.log(error);
+            res.sendStatus(400);
+        });
+    }
+    if (isValid){
+        res.sendStatus(200);
+    }
 };
 
 
@@ -78,26 +72,44 @@ exports.getRecommendedInterest = function (req, res) {
         })
 };
 
-exports.saveSortedInterest = function (req, res) {
-    var name = res.user_name;
+exports.saveSortedInterest = async function (req, res) {
+    var userName = res.user_name;
     var interest = req.body.interests;
+    var isValid = true;
     if (interest === undefined) {
         res.sendStatus(400);
-    } else {
-        var sortedInterest = "";
+    }
+    else {
         for (let i = 0; i < interest.length; i++) {
-            sortedInterest += interest[i];
-            if (i < interest.length - 1) {
-                sortedInterest += ",";
-            }
+            var sql = "SELECT * from UsersPOI where name = '" + interest[i] + "'";
+            // var sql = "UPDATE UsersPOI set position = '" + i + "' where name = '" + interest[i] + "' and user_name = '"+userName+"'";
+           DButilsAzure.execQuery(sql).then(function (result) {
+               if (Object.keys(result).length > 0){
+                   var update = "UPDATE UsersPOI set position = '" + i + "' where name = '" + interest[i] + "' and user_name = '"+userName+"'";
+                   DButilsAzure.execQuery(update).then().catch(error => console.log(error));
+               }
+               else{
+                   var date = new Date().toISOString();
+                   var insert = "INSERT INTO UsersPOI (user_name,name, date, position) values ('" + userName + "', " +
+                       "'" + interest[i] + "', '" +date+ "', '"+i+"')";
+                   DButilsAzure.insert(insert).then().catch(error => isValid = false);
+               }
+            }).catch(error => {isValid = false;});
         }
-        var sql = "UPDATE Users set sorted_POI = '" + sortedInterest + "' where user_name = '" + name + "'";
-        DButilsAzure.execQuery(sql).then(function (result) {
-            res.send();
-        }).catch(error => {
-            console.log(error);
+        if (isValid){
+            res.sendStatus(200);
+        }
+        else{
             res.sendStatus(400);
-        });
+        }
     }
 
+};
+
+
+exports.getSortedInterest = function (req, res) {
+    var userName = res.user_name;
+    var sql = "SELECT POI.name, POI.picture, POI.category, POI.rank from POI join UsersPOI on POI.name = UsersPOI.name " +
+        "where UsersPOI.user_name = '"+userName+"' order by UsersPOI.position asc";
+    DButilsAzure.execQuery(sql).then(result => res.send(result)).catch(error => console.log(error));
 };

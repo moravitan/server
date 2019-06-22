@@ -1,5 +1,7 @@
 const express = require('express');
 const app = express();
+const cors = require('cors');
+
 const user = require('./Users');
 const POI = require('./PointOfIntreset');
 const usersPOI = require('./UsersPOI');
@@ -7,10 +9,10 @@ const jwt = require("jsonwebtoken");
 
 const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
 
-const routers = ["/getPassword", "/getRandomThreeMostPopularPointOfInterest", "/getRecommendedInterest",
-    "/getLastTwoSavedInterest", "/getInterestInfo", "/getCategories", "/getAllPOI", "/getAllSavedInterest",
-    "/saveInterest", "/deleteInterest", "/addReview", "/saveSortedInterest", "/getSortedPOI"];
+const routers = ["/getRecommendedInterest", "/getLastTwoSavedInterest", "/getAllSavedInterest",
+    "/saveInterest","/saveSortedInterest", "/getSortedInterest"];
 
+app.use(cors());
 app.use(express.json());
 
 const key = "YuvalMor";
@@ -75,6 +77,14 @@ app.get('/getCategories', (req, res) => {
     res.send(categories);
 });
 
+app.get('/getQuestions', (req, res) => {
+    user.getQuestions(req,res);
+});
+
+app.get('/getUserQuestion/:user_name', (req, res) =>{
+    user.getUserQuestion(req,res);
+});
+
 app.get('/getAllPOI', (req, res) => {
     POI.getAllPOI(req, res);
 });
@@ -89,22 +99,16 @@ app.put('/saveInterest', (req, res) => {
 
 });
 
-app.delete('/deleteInterest', (req, res) => {
-    usersPOI.deleteInterest(req, res);
-});
-
-
 app.post('/addReview', (req, res) => {
     POI.addReview(req, res);
 });
 
 app.put('/saveSortedInterest', (req, res) => {
-    usersPOI.saveSortedInterest(req,res);
+    usersPOI.saveSortedInterest(req, res);
 });
 
-
-app.get('/getSortedPOI', (req, res) => {
-   usersPOI.getSortedPOI(req,res);
+app.get('/getSortedInterest', (req,res)=>{
+    usersPOI.getSortedInterest(req,res);
 });
 
 

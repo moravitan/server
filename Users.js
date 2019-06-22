@@ -6,7 +6,7 @@ const DButilsAzure = require('./DButils');
 const key = "YuvalMor";
 
 const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
-const countries = ["Australia", "Bolivia", "China", "Denemark","Israel","Latvia","Monaco","August","Norway","Panama","Switzerland","USA"];
+const countries = ["Australia", "Bolivia", "China", "Denemark", "Israel", "Latvia", "Monaco", "August", "Norway", "Panama", "Switzerland", "USA"];
 
 var userName;
 var password;
@@ -43,8 +43,8 @@ exports.login = function (req, res) {
 
 exports.register = function (req, res) {
     var isValidRequest = true;
-    userName = generateRandomCharacters(3, 8, false);
-    password = generateRandomCharacters(5, 10, true);
+    var userName = req.body.user_name;
+    var password = req.body.password;
     var firstName = req.body.first_name;
     var lastName = req.body.last_name;
     var city = req.body.city;
@@ -53,24 +53,23 @@ exports.register = function (req, res) {
     var questions = req.body.questions;
     var answers = req.body.answers;
     var category = req.body.interest;
-    if (!checkIfValid(firstName,lastName,city,country,email,questions,answers,category) || !countries.includes(country)){
+    if (!checkIfValid(userName, password, firstName, lastName, city, country, email, questions, answers, category) || !countries.includes(country)) {
         res.sendStatus(400);
-    }
-    else {
+    } else {
         var sql = "INSERT INTO Users ([user_name], [password],[first_name], [last_name], [city], [country], [email]) VALUES ('" + userName + "', '" + password + "', '" + firstName + "', '" + lastName + "', '" + city + "', '" + country + "', '" + email + "')";
         DButilsAzure.insert(sql)
             .then(function (result) {
             })
             .catch(function (err) {
+                isValidRequest = false;
                 console.log(err);
-                res.send(err)
             });
         for (let i = 0; i < category.length; i++) {
-            if (!categories.includes(category[i])){
+            if (!categories.includes(category[i])) {
                 isValidRequest = false;
             }
-
         }
+
         for (let i = 0; i < category.length && isValidRequest; i++) {
             sql = "INSERT INTO UsersCategories (user_name, name) VALUES ('" + userName + "','" + category[i] + "')";
             DButilsAzure.insert(sql).then(function (result) {
@@ -86,21 +85,28 @@ exports.register = function (req, res) {
         if (questions.length !== answers.length || questions.length < 2) {
             isValidRequest = false;
         }
-        if (!isValidRequest){
+
+        if (!isValidRequest) {
             res.sendStatus(400);
-        }
-        else{
-            for (let i = 0; i < questions.length; i++) {
-                sql = "INSERT INTO UsersQuestions (user_name, question, answer) VALUES ('" + userName + "','" + questions[i] + "', '" + answers[i] + "')";
+        } else {
+            for (let i = 0; i < questions.length && isValidRequest; i++) {
+                sql = "INSERT INTO UsersQuestion (user_name, question, answer) VALUES ('" + userName + "','" + questions[i] + "', '" + answers[i] + "')";
                 DButilsAzure.insert(sql).then(function (result) {
                 })
                     .catch(function (err) {
+                        cancel(userName,'UsersQuestions');
+                        isValidRequest = false;
                         console.log(err);
                         res.send(err);
                     });
             }
-            var details = {"user_name": userName, "password": password};
-            res.send(details);
+            if (isValidRequest) {
+                var details = {"user_name": userName, "password": password};
+                res.send(details);
+            }
+            else{
+                res.sendStatus(400);
+            }
         }
     }
 };
@@ -110,9 +116,9 @@ exports.getPassword = function (req, res) {
         var userName = req.body.user_name;
         var question = req.body.question;
         var answer = req.body.answer;
-        var sql = "SELECT Users.password FROM UsersQuestions join Users " +
-            "on Users.user_name = UsersQuestions.user_name where UsersQuestions.user_name = '" + userName + "' " +
-            "and UsersQuestions.question = '" + question + "' and UsersQuestions.answer = '" + answer + "'";
+        var sql = "SELECT Users.password FROM UsersQuestion join Users " +
+            "on Users.user_name = UsersQuestion.user_name where UsersQuestion.user_name = '" + userName + "' " +
+            "and UsersQuestion.question = '" + question + "' and UsersQuestion.answer = '" + answer + "'";
         DButilsAzure.execQuery(sql)
             .then(function (result) {
                 if (Object.keys(result).length > 0) {
@@ -134,42 +140,29 @@ exports.getPassword = function (req, res) {
 
 };
 
-function generateRandomCharacters(min, max, isPassword) {
-    var isContainDigit = false;
-    var isContainAlpha = false;
-    var result = '';
-    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    if (isPassword) {
-        characters += "0123456789";
-    }
-    var charactersLength = characters.length;
-    var length = Math.floor(Math.random() * (max - min + 1)) + min;
-    for (var i = 0; i < length; i++) {
-        var char = characters.charAt(Math.floor(Math.random() * charactersLength));
-        result += char;
-        if (isPassword && !isNaN(char)) {
-            isContainDigit = true;
-        }
-        if (isPassword && isNaN(char)) {
-            isContainAlpha = true;
-        }
-    }
-    if ((isPassword && isContainAlpha && isContainDigit) || !isPassword) {
-        return result;
-    } else {
-        return generateRandomCharacters(min, max, isPassword);
-    }
+exports.getQuestions = function(req, res) {
+    var sql = "SELECT * from Questions";
+    DButilsAzure.execQuery(sql).then(result => res.send(result)).catch(error => console.log(error));
+};
 
-}
+exports.getUserQuestion = function(req, res) {
+    var userName = req.params.user_name;
+    var sql = "SELECT question from UsersQuestion WHERE user_name = '"+userName+"'";
+    DButilsAzure.execQuery(sql).then(function (result) {
+        res.send(result);
+    }).catch(error => res.sendStatus(400))
+};
 
-function cancel(userName) {
-    var sql = "DELETE from Users where user_name = '"+userName+"'";
+function cancel(userName, table) {
+    var sql = "DELETE from '"+table+"' where user_name = '" + userName + "'";
     DButilsAzure.execQuery(sql).then().catch(error => console.log(error));
 
 }
 
 
-function checkIfValid(firstName, lastName, city, country, email, questions, answers, category) {
+function checkIfValid(userName, password, firstName, lastName, city, country, email, questions, answers, category) {
+    if (userName === undefined || !checkString(userName,false,/^[A-za-z]+$/)) return false;
+    if (password === undefined || !checkString(password, true,/^(?=.*[0-9])(?=.*[a-zA-Z])([a-zA-Z0-9]+)$/)) return false;
     if (firstName === undefined) return false;
     if (lastName === undefined) return false;
     if (city === undefined) return false;
@@ -179,4 +172,14 @@ function checkIfValid(firstName, lastName, city, country, email, questions, answ
     if (answers === undefined) return false;
     return category !== undefined;
 
+}
+
+
+
+function checkString(string, isPassword, pattern){
+    var isValid = pattern.test(string);
+    if (isPassword)
+        return isValid && string.length > 4 && string.length < 11;
+    else
+        return isValid && string.length > 2 && string.length < 9;
 }
