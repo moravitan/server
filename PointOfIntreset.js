@@ -39,12 +39,13 @@ exports.getRandomThreeMostPopularPointOfInterest = function (req, res) {
 };
 
 
-exports.addReview = function (req, res) {
+exports.addReview = function (req, res, next) {
     var name = req.body.name;
     var rank = req.body.rank;
     var review = req.body.review;
     var date = new Date().toISOString();
     var id = 1;
+    var finish = false;
     if (name === undefined || rank === undefined || review === undefined){
         res.sendStatus(400);
     }
@@ -58,7 +59,9 @@ exports.addReview = function (req, res) {
                         "', '" + rank + "', '" + date + "')";
                     DButilsAzure.execQuery(sql)
                         .then(function (result) {
+                            finish = true;
                             res.sendStatus(200);
+                            next();
                         })
                         .catch(function (err) {
                             console.log(err);
@@ -74,41 +77,42 @@ exports.addReview = function (req, res) {
                 res.status(400).send(e.message)
             }
         }
-        try {
-            var selectSql = "SELECT SUM(rank) as sumRank from POIreview where name = '" + name + "' group by name";
-            sql = "SELECT * from POIreview where name = '" + name + "'";
-            DButilsAzure.execQuery(sql)
-                .then(function (result) {
-                    var size = 1 + Object.keys(result).length;
-                    console.log(size);
-                    DButilsAzure.execQuery(selectSql)
-                        .then(function (result) {
-                            var total = 0;
-                            if (Object.keys(result).length > 0) {
-                                total = parseInt(result[0].sumRank);
-                            }
-                            console.log(total);
-                            var newRank = parseInt(((total / size) / 5) * 100);
-                            console.log(newRank);
-                            sql = "UPDATE POI set rank = '" + newRank.toString() + "' where name = '" + name + "'";
-                            DButilsAzure.execQuery(sql)
-                                .then(function (result) {
-                                })
-                                .catch(function (err) {
-                                    console.log(err);
-                                });
-                        })
-                        .catch(function (err) {
-                        })
-                        .catch(function (err) {
-                            console.log(err);
-                        });
-                });
-        } catch (e) {
-            console.log(e);
-            if (e instanceof CustomError) {
-                res.status(400).send(e.message)
-            }
+    }
+};
+
+exports.calculateTotalRank = function(req, res, next){
+    var name = req.body.name;
+    try {
+        var selectSql = "SELECT SUM(rank) as sumRank from POIreview where name = '" + name + "' group by name";
+        sql = "SELECT * from POIreview where name = '" + name + "'";
+        DButilsAzure.execQuery(sql)
+            .then(function (result) {
+                var size = Object.keys(result).length;
+                DButilsAzure.execQuery(selectSql)
+                    .then(function (result) {
+                        var total = 0;
+                        if (Object.keys(result).length > 0) {
+                            total = parseInt(result[0].sumRank);
+                        }
+                        var newRank = parseInt(((total / size) / 5) * 100);
+                        sql = "UPDATE POI set rank = '" + newRank.toString() + "' where name = '" + name + "'";
+                        DButilsAzure.execQuery(sql)
+                            .then(function (result) {
+                            })
+                            .catch(function (err) {
+                                console.log(err);
+                            });
+                    })
+                    .catch(function (err) {
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                    });
+            });
+    } catch (e) {
+        console.log(e);
+        if (e instanceof CustomError) {
+            res.status(400).send(e.message)
         }
     }
 };
@@ -127,14 +131,15 @@ exports.getAllPOI = function (req, res) {
 
 exports.getInterestInfo = function (req, res) {
     var interestName = req.params.interest_name;
+    console.log(interestName);
     if (interestName === undefined){
         res.sendStatus(400);
     }
     else {
         var sql = "SELECT POI.name, POI.description, POI.number_of_watchers, POI.rank as rank, POIreview.review, " +
             "POIreview.rank as reviewRank , POIreview.date  " +
-            "FROM POI JOIN POIreview " +
-            "ON POI.name = POIreview.name WHERE POIreview.name = '" + interestName + "' order by POIreview.date desc";
+            "FROM POI LEFT JOIN POIreview " +
+            "ON POI.name = POIreview.name WHERE POI.name = '" + interestName + "' order by POIreview.date desc";
         DButilsAzure.execQuery(sql)
             .then(function (result) {
                 var response = [];

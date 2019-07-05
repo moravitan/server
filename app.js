@@ -10,7 +10,7 @@ const jwt = require("jsonwebtoken");
 const categories = ["Night life", "Museums", "Food and Drinks", "Sailing and water sports"];
 
 const routers = ["/getRecommendedInterest", "/getLastTwoSavedInterest", "/getAllSavedInterest",
-    "/saveInterest","/saveSortedInterest", "/getSortedInterest"];
+    "/saveInterest", "/saveSortedInterest", "/getSortedInterest"];
 
 app.use(cors());
 app.use(express.json());
@@ -78,11 +78,11 @@ app.get('/getCategories', (req, res) => {
 });
 
 app.get('/getQuestions', (req, res) => {
-    user.getQuestions(req,res);
+    user.getQuestions(req, res);
 });
 
-app.get('/getUserQuestion/:user_name', (req, res) =>{
-    user.getUserQuestion(req,res);
+app.get('/getUserQuestion/:user_name', (req, res) => {
+    user.getUserQuestion(req, res);
 });
 
 app.get('/getAllPOI', (req, res) => {
@@ -99,16 +99,19 @@ app.put('/saveInterest', (req, res) => {
 
 });
 
-app.post('/addReview', (req, res) => {
-    POI.addReview(req, res);
-});
+app.post('/addReview', function (req, res, next) {
+        POI.addReview(req, res, next);
+    }, function (req, res, next) {
+        POI.calculateTotalRank(req,res,next);
+    }
+);
 
 app.put('/saveSortedInterest', (req, res) => {
     usersPOI.saveSortedInterest(req, res);
 });
 
-app.get('/getSortedInterest', (req,res)=>{
-    usersPOI.getSortedInterest(req,res);
+app.get('/getSortedInterest', (req, res) => {
+    usersPOI.getSortedInterest(req, res);
 });
 
 
